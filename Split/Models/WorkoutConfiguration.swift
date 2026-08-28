@@ -26,7 +26,7 @@ enum WorkoutConfigurationError: LocalizedError, Equatable {
   }
 }
 
-struct WorkoutConfiguration: Equatable {
+struct WorkoutConfiguration: Codable, Equatable {
   let totalDuration: TimeInterval
   let warmupDuration: TimeInterval
   let runDuration: TimeInterval

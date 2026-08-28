@@ -14,8 +14,11 @@ struct WorkoutSegment: Equatable {
 
 struct WorkoutSnapshot: Equatable {
   let phase: WorkoutPhase
+  let intervalDuration: TimeInterval
   let intervalRemaining: TimeInterval
   let totalRemaining: TimeInterval
+  let cycleNumber: Int
+  let cycleCount: Int
   let isComplete: Bool
 }
 
@@ -61,28 +64,50 @@ struct IntervalPlan: Equatable {
 
   func snapshot(at elapsed: TimeInterval) -> WorkoutSnapshot {
     let clampedElapsed = max(0, elapsed)
+    let splitStageCount = segments.filter { $0.phase != .warmup }.count
 
     guard clampedElapsed < configuration.workoutDuration,
-      let segment = segments.first(where: { clampedElapsed < $0.end })
+      let segmentIndex = segments.firstIndex(where: { clampedElapsed < $0.end })
     else {
       return WorkoutSnapshot(
         phase: segments.last?.phase ?? .run,
+        intervalDuration: 0,
         intervalRemaining: 0,
         totalRemaining: 0,
+        cycleNumber: (splitStageCount + 1) / 2,
+        cycleCount: (splitStageCount + 1) / 2,
         isComplete: true
       )
     }
 
+    let segment = segments[segmentIndex]
+    let splitElapsed = max(0, clampedElapsed - configuration.warmupDuration)
+    let splitStageNumber =
+      segment.phase == .warmup
+      ? 0
+      : segments[..<segmentIndex].filter { $0.phase != .warmup }.count + 1
     return WorkoutSnapshot(
       phase: segment.phase,
+      intervalDuration: segment.end - segment.start,
       intervalRemaining: segment.end - clampedElapsed,
-      totalRemaining: configuration.workoutDuration - clampedElapsed,
+      totalRemaining: max(0, configuration.totalDuration - splitElapsed),
+      cycleNumber: splitStageNumber == 0 ? 0 : (splitStageNumber + 1) / 2,
+      cycleCount: (splitStageCount + 1) / 2,
       isComplete: false
     )
   }
 
   func cues(after elapsed: TimeInterval) -> [WorkoutCue] {
     var cues: [WorkoutCue] = []
+
+    if elapsed <= 0 {
+      cues.append(
+        .transition(
+          to: configuration.warmupDuration > 0 ? .warmup : .run,
+          at: 0
+        )
+      )
+    }
 
     let warmupWarningTime = configuration.warmupDuration - 60
     if configuration.warmupDuration > 60, warmupWarningTime > elapsed {

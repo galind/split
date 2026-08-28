@@ -33,7 +33,8 @@ The cue files and app icon are committed. Their source generators live in `scrip
 
 ### Spoken notification sounds
 
-The bundled notification sounds use a soft female voice:
+The bundled notification sounds use a short, gently faded beep followed by a brief pause and a
+soft female voice:
 
 - `warmup.wav`: “One minute”
 - `run.wav`: “Run”
@@ -46,8 +47,10 @@ Regenerate all four Linear PCM, mono, 44.1 kHz WAV files with:
 ruby scripts/generate_cue_sounds.rb
 ```
 
-The generator uses macOS `say` and `afconvert`. Its centralized voice configuration selects US
-English `Samantha` at 175 words per minute. The voice's native pitch and volume are left untouched
-for a more natural delivery. It validates the installed voice, audio format, and duration before replacing any committed file. All four files are listed in the
-Split target's Copy Bundle Resources phase, so scheduled local notifications continue to work while
-the app is suspended or terminated. No background audio mode is used.
+The generator uses macOS `say` and `afconvert`. Its centralized configuration adds 80 ms of silence,
+a 140 ms 880 Hz beep with 12 ms fades, a 180 ms pause, and 250 ms of trailing silence around each
+spoken cue. It selects US English `Samantha` at 175 words per minute; the voice's native pitch and
+volume are left untouched for a more natural delivery. It validates the installed voice, audio
+format, and duration before replacing any committed file. All four files are listed in the Split
+target's Copy Bundle Resources phase, so scheduled local notifications continue to work while the
+app is suspended or terminated. No background audio mode is used.

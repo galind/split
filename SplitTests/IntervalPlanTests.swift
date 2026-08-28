@@ -15,6 +15,31 @@ final class IntervalPlanTests: XCTestCase {
     XCTAssertEqual(plan.snapshot(at: 120).phase, .run)
   }
 
+  func testSnapshotDescribesCurrentPositionAndUpcomingPhase() {
+    let plan = IntervalPlan(
+      configuration: WorkoutConfiguration(
+        cycles: 2,
+        warmupSeconds: 150,
+        runSeconds: 60,
+        walkSeconds: 75
+      )
+    )
+
+    let warmup = plan.snapshot(at: 0)
+    XCTAssertEqual(warmup.intervalDuration, 150)
+    XCTAssertEqual(warmup.cycleNumber, 0)
+    XCTAssertEqual(warmup.cycleCount, 2)
+    XCTAssertEqual(warmup.totalRemaining, 270)
+
+    let firstWalk = plan.snapshot(at: 210)
+    XCTAssertEqual(firstWalk.intervalDuration, 75)
+    XCTAssertEqual(firstWalk.phase, .walk)
+    XCTAssertEqual(firstWalk.cycleNumber, 1)
+
+    let finalWalk = plan.snapshot(at: 345)
+    XCTAssertEqual(finalWalk.cycleNumber, 2)
+  }
+
   func testWarmupOccursBeforeSplitProcess() {
     let plan = IntervalPlan(
       configuration: WorkoutConfiguration(
@@ -30,8 +55,12 @@ final class IntervalPlanTests: XCTestCase {
     XCTAssertEqual(plan.snapshot(at: 150).phase, .run)
     XCTAssertEqual(plan.snapshot(at: 210).phase, .walk)
     XCTAssertEqual(
-      Array(plan.cues(after: 0).prefix(2)),
-      [.warmupWarning(at: 90), .transition(to: .run, at: 150)]
+      Array(plan.cues(after: 0).prefix(3)),
+      [
+        .transition(to: .warmup, at: 0),
+        .warmupWarning(at: 90),
+        .transition(to: .run, at: 150),
+      ]
     )
   }
 
@@ -46,6 +75,8 @@ final class IntervalPlanTests: XCTestCase {
 
     XCTAssertEqual(configuration.totalDuration, 300)
     XCTAssertEqual(configuration.workoutDuration, 450)
+    XCTAssertEqual(plan.snapshot(at: 0).totalRemaining, 300)
+    XCTAssertEqual(plan.snapshot(at: 149).totalRemaining, 300)
     XCTAssertEqual(plan.snapshot(at: 150).totalRemaining, 300)
     XCTAssertEqual(plan.segments.last?.end, 450)
   }
@@ -101,6 +132,8 @@ final class IntervalPlanTests: XCTestCase {
         WorkoutSegment(phase: .run, start: 240, end: 300),
       ]
     )
+    XCTAssertEqual(plan.snapshot(at: 240).intervalDuration, 60)
+    XCTAssertEqual(plan.snapshot(at: 270).intervalRemaining, 30)
   }
 
   func testCuesAfterPauseOnlyContainFutureEvents() {
@@ -117,6 +150,30 @@ final class IntervalPlanTests: XCTestCase {
         .complete(at: 300),
       ]
     )
+  }
+
+  func testNoWarmupStartsWithRunCue() {
+    let plan = IntervalPlan(
+      configuration: WorkoutConfiguration(totalMinutes: 5, runMinutes: 1, walkMinutes: 1)
+    )
+
+    XCTAssertEqual(plan.cues(after: 0).first, .transition(to: .run, at: 0))
+    XCTAssertEqual(plan.cues(after: 0).last, .complete(at: 300))
+    XCTAssertFalse(plan.cues(after: 1).contains(.transition(to: .run, at: 0)))
+  }
+
+  func testWarmupStartsWithWarmupCue() {
+    let plan = IntervalPlan(
+      configuration: WorkoutConfiguration(
+        totalMinutes: 5,
+        warmupSeconds: 150,
+        runMinutes: 1,
+        walkMinutes: 1
+      )
+    )
+
+    XCTAssertEqual(plan.cues(after: 0).first, .transition(to: .warmup, at: 0))
+    XCTAssertFalse(plan.cues(after: 1).contains(.transition(to: .warmup, at: 0)))
   }
 
   func testCuesAfterPausePastWarmupRebuildFromPausedPosition() {

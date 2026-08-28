@@ -19,6 +19,7 @@
 		10000000000000000000000A /* walk.wav in Resources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000A /* walk.wav */; };
 		10000000000000000000000B /* complete.wav in Resources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000B /* complete.wav */; };
 		10000000000000000000000C /* warmup.wav in Resources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000C /* warmup.wav */; };
+		10000000000000000000000D /* ActiveWorkoutSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000D /* ActiveWorkoutSession.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -35,6 +36,7 @@
 		20000000000000000000000A /* walk.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = walk.wav; sourceTree = "<group>"; };
 		20000000000000000000000B /* complete.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = complete.wav; sourceTree = "<group>"; };
 		20000000000000000000000C /* warmup.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = warmup.wav; sourceTree = "<group>"; };
+		20000000000000000000000D /* ActiveWorkoutSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveWorkoutSession.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -99,6 +101,7 @@
 			children = (
 				200000000000000000000005 /* WorkoutConfiguration.swift */,
 				200000000000000000000006 /* IntervalPlan.swift */,
+				20000000000000000000000D /* ActiveWorkoutSession.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -218,6 +221,7 @@
 				100000000000000000000004 /* WorkoutSessionController.swift in Sources */,
 				100000000000000000000005 /* WorkoutConfiguration.swift in Sources */,
 				100000000000000000000006 /* IntervalPlan.swift in Sources */,
+				10000000000000000000000D /* ActiveWorkoutSession.swift in Sources */,
 				100000000000000000000007 /* NotificationScheduler.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -349,6 +353,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = AAH8265685;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Split;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
@@ -372,6 +377,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = AAH8265685;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Split;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
