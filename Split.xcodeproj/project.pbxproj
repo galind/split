@@ -20,6 +20,14 @@
 		10000000000000000000000B /* complete.wav in Resources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000B /* complete.wav */; };
 		10000000000000000000000C /* warmup.wav in Resources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000C /* warmup.wav */; };
 		10000000000000000000000D /* ActiveWorkoutSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000D /* ActiveWorkoutSession.swift */; };
+		10000000000000000000000E /* NotificationPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000E /* NotificationPreferences.swift */; };
+		10000000000000000000000F /* NotificationBuilderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000F /* NotificationBuilderView.swift */; };
+		100000000000000000000010 /* warmup-noticeable.wav in Resources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000010 /* warmup-noticeable.wav */; };
+		100000000000000000000011 /* run-noticeable.wav in Resources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000011 /* run-noticeable.wav */; };
+		100000000000000000000012 /* walk-noticeable.wav in Resources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000012 /* walk-noticeable.wav */; };
+		100000000000000000000013 /* complete-noticeable.wav in Resources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000013 /* complete-noticeable.wav */; };
+		100000000000000000000014 /* attention.wav in Resources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000014 /* attention.wav */; };
+		100000000000000000000015 /* attention-noticeable.wav in Resources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000015 /* attention-noticeable.wav */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,6 +45,14 @@
 		20000000000000000000000B /* complete.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = complete.wav; sourceTree = "<group>"; };
 		20000000000000000000000C /* warmup.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = warmup.wav; sourceTree = "<group>"; };
 		20000000000000000000000D /* ActiveWorkoutSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveWorkoutSession.swift; sourceTree = "<group>"; };
+		20000000000000000000000E /* NotificationPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPreferences.swift; sourceTree = "<group>"; };
+		20000000000000000000000F /* NotificationBuilderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationBuilderView.swift; sourceTree = "<group>"; };
+		200000000000000000000010 /* warmup-noticeable.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "warmup-noticeable.wav"; sourceTree = "<group>"; };
+		200000000000000000000011 /* run-noticeable.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "run-noticeable.wav"; sourceTree = "<group>"; };
+		200000000000000000000012 /* walk-noticeable.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "walk-noticeable.wav"; sourceTree = "<group>"; };
+		200000000000000000000013 /* complete-noticeable.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "complete-noticeable.wav"; sourceTree = "<group>"; };
+		200000000000000000000014 /* attention.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = attention.wav; sourceTree = "<group>"; };
+		200000000000000000000015 /* attention-noticeable.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "attention-noticeable.wav"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -92,6 +108,7 @@
 			children = (
 				200000000000000000000003 /* ContentView.swift */,
 				200000000000000000000004 /* WorkoutSessionController.swift */,
+				20000000000000000000000F /* NotificationBuilderView.swift */,
 			);
 			path = Workout;
 			sourceTree = "<group>";
@@ -102,6 +119,7 @@
 				200000000000000000000005 /* WorkoutConfiguration.swift */,
 				200000000000000000000006 /* IntervalPlan.swift */,
 				20000000000000000000000D /* ActiveWorkoutSession.swift */,
+				20000000000000000000000E /* NotificationPreferences.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -138,6 +156,12 @@
 				200000000000000000000009 /* run.wav */,
 				20000000000000000000000A /* walk.wav */,
 				20000000000000000000000B /* complete.wav */,
+				200000000000000000000010 /* warmup-noticeable.wav */,
+				200000000000000000000011 /* run-noticeable.wav */,
+				200000000000000000000012 /* walk-noticeable.wav */,
+				200000000000000000000013 /* complete-noticeable.wav */,
+				200000000000000000000014 /* attention.wav */,
+				200000000000000000000015 /* attention-noticeable.wav */,
 			);
 			path = Sounds;
 			sourceTree = "<group>";
@@ -205,6 +229,12 @@
 				100000000000000000000009 /* run.wav in Resources */,
 				10000000000000000000000A /* walk.wav in Resources */,
 				10000000000000000000000B /* complete.wav in Resources */,
+				100000000000000000000010 /* warmup-noticeable.wav in Resources */,
+				100000000000000000000011 /* run-noticeable.wav in Resources */,
+				100000000000000000000012 /* walk-noticeable.wav in Resources */,
+				100000000000000000000013 /* complete-noticeable.wav in Resources */,
+				100000000000000000000014 /* attention.wav in Resources */,
+				100000000000000000000015 /* attention-noticeable.wav in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -222,6 +252,8 @@
 				100000000000000000000005 /* WorkoutConfiguration.swift in Sources */,
 				100000000000000000000006 /* IntervalPlan.swift in Sources */,
 				10000000000000000000000D /* ActiveWorkoutSession.swift in Sources */,
+				10000000000000000000000E /* NotificationPreferences.swift in Sources */,
+				10000000000000000000000F /* NotificationBuilderView.swift in Sources */,
 				100000000000000000000007 /* NotificationScheduler.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

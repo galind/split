@@ -6,7 +6,10 @@ struct ContentView: View {
   @AppStorage("runSeconds") private var runSeconds = 60
   @AppStorage("walkSeconds") private var walkSeconds = 60
   @StateObject private var session = WorkoutSessionController()
+  @State private var notificationPreferences = NotificationPreferencesStore().load()
+  @State private var showsNotificationBuilder = false
   @State private var showsStopConfirmation = false
+  private let notificationPreferencesStore = NotificationPreferencesStore()
   @Environment(\.scenePhase) private var scenePhase
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @Environment(\.colorScheme) private var colorScheme
@@ -43,7 +46,14 @@ struct ContentView: View {
     } message: {
       Text("Your current workout will end.")
     }
+    .sheet(isPresented: $showsNotificationBuilder) {
+      NotificationBuilderView(preferences: $notificationPreferences)
+        .presentationDragIndicator(.visible)
+    }
     .onAppear(perform: migrateLegacyDurationsIfNeeded)
+    .onChange(of: notificationPreferences) { _, newPreferences in
+      notificationPreferencesStore.save(newPreferences)
+    }
     .onChange(of: runSeconds) { _, _ in clampCycleCount() }
     .onChange(of: walkSeconds) { _, _ in clampCycleCount() }
     .onChange(of: scenePhase) { _, newPhase in
@@ -96,6 +106,10 @@ struct ContentView: View {
             Text("SPLIT")
               .font(.system(size: 48, weight: .black, design: .rounded))
               .tracking(4)
+              .frame(maxWidth: .infinity)
+              .overlay(alignment: .trailing) {
+                notificationSettingsButton
+              }
               .accessibilityAddTraits(.isHeader)
 
             Spacer(minLength: 32)
@@ -123,6 +137,29 @@ struct ContentView: View {
       }
       .background(Color(.systemGroupedBackground))
     }
+  }
+
+  private var notificationSettingsButton: some View {
+    Button {
+      showsNotificationBuilder = true
+    } label: {
+      Image(systemName: "bell.fill")
+        .font(.body.weight(.semibold))
+        .foregroundStyle(appTint)
+        .frame(width: 44, height: 44)
+        .background(
+          Color(.secondarySystemGroupedBackground),
+          in: Circle()
+        )
+        .overlay {
+          Circle()
+            .stroke(Color.secondary.opacity(0.12), lineWidth: 1)
+        }
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel("Notification settings")
+    .accessibilityHint("Opens notification cue customization.")
   }
 
   private var setupSummary: some View {
@@ -180,7 +217,10 @@ struct ContentView: View {
   private var startButton: some View {
     Button {
       Task {
-        await session.start(configuration: configuration)
+        await session.start(
+          configuration: configuration,
+          notificationPreferences: notificationPreferences
+        )
       }
     } label: {
       Group {
@@ -789,7 +829,10 @@ struct ContentView: View {
     guard let completedConfiguration = session.activeConfiguration else { return }
     session.stop()
     Task {
-      await session.start(configuration: completedConfiguration)
+      await session.start(
+        configuration: completedConfiguration,
+        notificationPreferences: notificationPreferences
+      )
     }
   }
 

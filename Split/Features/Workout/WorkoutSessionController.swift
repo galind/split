@@ -27,6 +27,8 @@ final class WorkoutSessionController: ObservableObject {
 
   private let notificationScheduler: NotificationScheduler
   private let sessionStore: ActiveWorkoutSessionStore
+  private let notificationPreferencesStore: NotificationPreferencesStore
+  private var notificationPreferences: NotificationPreferences
   private var sessionID: UUID?
   private var plan: IntervalPlan?
   private var elapsedBeforeRun: TimeInterval = 0
@@ -42,10 +44,13 @@ final class WorkoutSessionController: ObservableObject {
 
   init(
     notificationScheduler: NotificationScheduler = NotificationScheduler(),
-    sessionStore: ActiveWorkoutSessionStore = ActiveWorkoutSessionStore()
+    sessionStore: ActiveWorkoutSessionStore = ActiveWorkoutSessionStore(),
+    notificationPreferencesStore: NotificationPreferencesStore = NotificationPreferencesStore()
   ) {
     self.notificationScheduler = notificationScheduler
     self.sessionStore = sessionStore
+    self.notificationPreferencesStore = notificationPreferencesStore
+    notificationPreferences = notificationPreferencesStore.load()
     restoreSession()
 
     notificationReconciliationTask = Task { [weak self] in
@@ -53,7 +58,10 @@ final class WorkoutSessionController: ObservableObject {
     }
   }
 
-  func start(configuration: WorkoutConfiguration) async {
+  func start(
+    configuration: WorkoutConfiguration,
+    notificationPreferences requestedPreferences: NotificationPreferences? = nil
+  ) async {
     guard status == .idle, !isBusy else { return }
     notificationReconciliationTask?.cancel()
     notificationReconciliationTask = nil
@@ -67,6 +75,9 @@ final class WorkoutSessionController: ObservableObject {
     do {
       try configuration.validate()
       try await notificationScheduler.ensureSoundPermission()
+      let preferences = requestedPreferences ?? notificationPreferencesStore.load()
+      notificationPreferences = preferences.normalized()
+      notificationPreferencesStore.save(notificationPreferences)
       let newPlan = IntervalPlan(configuration: configuration)
       let startDate = Date().addingTimeInterval(Self.countInDuration)
       await notificationScheduler.cancelStalePending()
@@ -78,7 +89,7 @@ final class WorkoutSessionController: ObservableObject {
       runStartedAt = startDate
       status = .countingDown
       countInRemaining = Int(Self.countInDuration)
-      UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+      performHaptic(strength: notificationPreferences.hapticStrength)
       enteredCountIn = true
       persistSession()
       startTimer()
@@ -87,7 +98,8 @@ final class WorkoutSessionController: ObservableObject {
         plan: newPlan,
         sessionID: newSessionID,
         elapsed: 0,
-        anchoredAt: startDate
+        anchoredAt: startDate,
+        preferences: notificationPreferences
       )
 
       guard sessionID == newSessionID, status == .countingDown || status == .running else {
@@ -147,7 +159,8 @@ final class WorkoutSessionController: ObservableObject {
         plan: plan,
         sessionID: resumedSessionID,
         elapsed: elapsedBeforeRun,
-        anchoredAt: resumeDate
+        anchoredAt: resumeDate,
+        preferences: notificationPreferences
       )
       sessionID = resumedSessionID
       runStartedAt = resumeDate
@@ -243,8 +256,10 @@ final class WorkoutSessionController: ObservableObject {
     if snapshot.isComplete {
       finish(providesFeedback: providesHaptic)
     } else if providesHaptic, previousPhase != snapshot.phase {
-      let generator = UINotificationFeedbackGenerator()
-      generator.notificationOccurred(snapshot.phase == .run ? .success : .warning)
+      let cueType = notificationCueType(for: snapshot.phase)
+      if notificationPreferences[cueType].isEnabled {
+        performCueHaptic(cueType)
+      }
       announce(
         "\(snapshot.phase.rawValue.capitalized) interval. "
           + "\(accessibleDuration(snapshot.intervalRemaining)) remaining",
@@ -265,7 +280,7 @@ final class WorkoutSessionController: ObservableObject {
       updateDisplay(at: date, providesHaptic: false)
       announce("\(phase.rawValue.capitalized) started", after: phase == .run ? 1.5 : 0)
     } else if previousRemaining != countInRemaining {
-      UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+      performHaptic(strength: notificationPreferences.hapticStrength)
     }
   }
 
@@ -277,8 +292,8 @@ final class WorkoutSessionController: ObservableObject {
     status = .complete
     stopTimer()
     persistSession()
-    if providesFeedback {
-      UINotificationFeedbackGenerator().notificationOccurred(.success)
+    if providesFeedback, notificationPreferences[.workoutCompletes].isEnabled {
+      performCueHaptic(.workoutCompletes)
       announce("Workout complete", after: 1.5)
     }
   }
@@ -345,7 +360,8 @@ final class WorkoutSessionController: ObservableObject {
         plan: restoredPlan,
         sessionID: restoredSessionID,
         elapsed: isCountingDown ? 0 : elapsed(at: now),
-        anchoredAt: isCountingDown ? (runStartedAt ?? now) : now
+        anchoredAt: isCountingDown ? (runStartedAt ?? now) : now,
+        preferences: notificationPreferences
       )
       guard restorationIsCurrent(sessionID: restoredSessionID) else {
         notificationScheduler.cancelPending(
@@ -448,5 +464,36 @@ final class WorkoutSessionController: ObservableObject {
       return "\(minutes) \(minutes == 1 ? "minute" : "minutes")"
     }
     return "\(minutes) minutes, \(remainingSeconds) seconds"
+  }
+
+  private func notificationCueType(for phase: WorkoutPhase) -> NotificationCueType {
+    switch phase {
+    case .warmup: return .warmupBegins
+    case .run: return .runBegins
+    case .walk: return .walkBegins
+    }
+  }
+
+  private func performCueHaptic(_ type: NotificationCueType) {
+    if notificationPreferences.hapticStrength == .medium {
+      let generator = UINotificationFeedbackGenerator()
+      generator.prepare()
+      generator.notificationOccurred(type == .walkBegins ? .warning : .success)
+      return
+    }
+    performHaptic(strength: notificationPreferences.effectiveHapticStrength(for: type))
+  }
+
+  private func performHaptic(strength: NotificationHapticStrength) {
+    let style: UIImpactFeedbackGenerator.FeedbackStyle
+    switch strength {
+    case .off: return
+    case .light: style = .light
+    case .medium: style = .medium
+    case .heavy: style = .heavy
+    }
+    let generator = UIImpactFeedbackGenerator(style: style)
+    generator.prepare()
+    generator.impactOccurred()
   }
 }

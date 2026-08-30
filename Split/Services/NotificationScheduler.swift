@@ -16,7 +16,11 @@ enum NotificationPermissionError: LocalizedError {
 }
 
 struct NotificationScheduler {
+  static let previewCategoryIdentifier = "SPLIT_NOTIFICATION_PREVIEW"
+  static let previewBundledSoundKey = "splitPreviewBundledSound"
+  static let previewHasNoSoundKey = "splitPreviewHasNoSound"
   private static let identifierPrefix = "split.workout."
+  private static let previewIdentifier = "split.notification-preview"
   private let center = UNUserNotificationCenter.current()
 
   func ensureSoundPermission() async throws {
@@ -41,49 +45,16 @@ struct NotificationScheduler {
     plan: IntervalPlan,
     sessionID: UUID,
     elapsed: TimeInterval,
-    anchoredAt anchorDate: Date
+    anchoredAt anchorDate: Date,
+    preferences: NotificationPreferences
   ) async throws {
     cancelPending(plan: plan, sessionID: sessionID)
 
     do {
-      for (index, cue) in plan.cues(after: elapsed).enumerated() {
+      for (index, cue) in preferences.resolvedCues(for: plan, after: elapsed).enumerated() {
         try Task.checkCancellation()
-        let content = UNMutableNotificationContent()
-        let cueTime: TimeInterval
-
-        switch cue {
-        case .warmupWarning(at: let time):
-          cueTime = time
-          content.title = "WARMUP"
-          content.body = "1 minute remaining"
-          content.sound = UNNotificationSound(
-            named: UNNotificationSoundName(rawValue: "warmup.wav")
-          )
-        case .transition(let phase, at: let time):
-          cueTime = time
-          content.title = phase.rawValue
-          switch phase {
-          case .warmup:
-            content.body = "Start walking"
-          case .run:
-            content.body = "Switch to running"
-          case .walk:
-            content.body = "Switch to walking"
-          }
-          content.sound = UNNotificationSound(
-            named: UNNotificationSoundName(rawValue: phase == .run ? "run.wav" : "walk.wav")
-          )
-        case .complete(at: let time):
-          cueTime = time
-          content.title = "DONE"
-          content.body = "Workout complete"
-          content.sound = UNNotificationSound(
-            named: UNNotificationSoundName(rawValue: "complete.wav")
-          )
-        }
-
-        content.categoryIdentifier = "SPLIT_WORKOUT"
-        let fireDate = anchorDate.addingTimeInterval(cueTime - elapsed)
+        let content = content(for: cue, categoryIdentifier: "SPLIT_WORKOUT")
+        let fireDate = anchorDate.addingTimeInterval(cue.time - elapsed)
         let components = Calendar.current.dateComponents(
           [.year, .month, .day, .hour, .minute, .second, .nanosecond],
           from: fireDate
@@ -101,6 +72,36 @@ struct NotificationScheduler {
       cancelPending(plan: plan, sessionID: sessionID)
       throw error
     }
+  }
+
+  func schedulePreview(
+    type: NotificationCueType,
+    preferences: NotificationPreferences
+  ) async throws {
+    try await ensureSoundPermission()
+
+    center.removePendingNotificationRequests(withIdentifiers: [Self.previewIdentifier])
+    center.removeDeliveredNotifications(withIdentifiers: [Self.previewIdentifier])
+
+    let cue = preferences.resolvedPreviewCue(for: type)
+    let previewContent = content(
+      for: cue,
+      categoryIdentifier: Self.previewCategoryIdentifier
+    )
+    switch cue.sound {
+    case .bundled(let filename):
+      previewContent.userInfo[Self.previewBundledSoundKey] = filename
+    case .none:
+      previewContent.userInfo[Self.previewHasNoSoundKey] = true
+    case .systemDefault:
+      break
+    }
+    let request = UNNotificationRequest(
+      identifier: Self.previewIdentifier,
+      content: previewContent,
+      trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+    )
+    try await center.add(request)
   }
 
   func cancelPending(plan: IntervalPlan, sessionID: UUID) {
@@ -137,5 +138,26 @@ struct NotificationScheduler {
 
   private func identifier(for sessionID: UUID, index: Int) -> String {
     sessionPrefix(sessionID) + String(index)
+  }
+
+  private func content(
+    for cue: ResolvedNotificationCue,
+    categoryIdentifier: String
+  ) -> UNMutableNotificationContent {
+    let content = UNMutableNotificationContent()
+    content.title = cue.title
+    content.body = cue.body
+    switch cue.sound {
+    case .bundled(let filename):
+      content.sound = UNNotificationSound(
+        named: UNNotificationSoundName(rawValue: filename)
+      )
+    case .systemDefault:
+      content.sound = .default
+    case .none:
+      content.sound = nil
+    }
+    content.categoryIdentifier = categoryIdentifier
+    return content
   }
 }

@@ -16,6 +16,8 @@ BEEP_LEVEL = 0.24
 BEEP_FADE_MS = 12
 POST_BEEP_GAP_MS = 180
 TRAILING_SILENCE_MS = 250
+NOTICEABLE_GAIN = 1.65
+ATTENTION_GAP_MS = 110
 
 SOUNDS = {
   "warmup.wav" => "One minute",
@@ -25,6 +27,7 @@ SOUNDS = {
 }.freeze
 
 project_root = File.expand_path("..", __dir__)
+variants_only = ARGV.delete("--variants-only")
 output_directory = File.expand_path(ARGV.fetch(0, "Split/Resources/Sounds"), project_root)
 
 def require_command(name)
@@ -51,6 +54,12 @@ def beep
     envelope = [fade_in, fade_out].min
     phase = 2 * Math::PI * BEEP_FREQUENCY_HZ * index / SAMPLE_RATE
     (Math.sin(phase) * BEEP_LEVEL * envelope * 32_767).round
+  end
+end
+
+def amplified(samples, gain)
+  samples.map do |sample|
+    [[(sample * gain).round, 32_767].min, -32_768].max
   end
 end
 
@@ -81,6 +90,27 @@ def write_pcm_wav(path, samples)
   wave = "WAVE" + "fmt " + [format.bytesize].pack("V") + format +
     "data" + [pcm.bytesize].pack("V") + pcm
   File.binwrite(path, "RIFF" + [wave.bytesize].pack("V") + wave)
+end
+
+if variants_only
+  SOUNDS.each_key do |filename|
+    source_path = File.join(output_directory, filename)
+    noticeable_path = File.join(output_directory, filename.sub(/\.wav\z/, "-noticeable.wav"))
+    write_pcm_wav(noticeable_path, amplified(read_pcm_samples(source_path), NOTICEABLE_GAIN))
+    puts "Generated #{noticeable_path} from the existing cue"
+  end
+
+  attention_samples = silence(LEAD_IN_MS) + beep + silence(TRAILING_SILENCE_MS)
+  attention_path = File.join(output_directory, "attention.wav")
+  write_pcm_wav(attention_path, attention_samples)
+  puts "Generated #{attention_path}"
+
+  noticeable_attention_samples = silence(LEAD_IN_MS) + amplified(beep, NOTICEABLE_GAIN) +
+    silence(ATTENTION_GAP_MS) + amplified(beep, NOTICEABLE_GAIN) + silence(TRAILING_SILENCE_MS)
+  noticeable_attention_path = File.join(output_directory, "attention-noticeable.wav")
+  write_pcm_wav(noticeable_attention_path, noticeable_attention_samples)
+  puts "Generated #{noticeable_attention_path}"
+  exit
 end
 
 require_command("say")
@@ -135,11 +165,45 @@ Dir.mktmpdir("split-spoken-cues") do |temporary_directory|
     abort("#{filename} contains no spoken audio") unless duration.positive?
     abort("#{filename} is too long for a notification sound") if duration >= 30
 
-    generated_sounds << [generated_path, destination_path, words, duration]
+    noticeable_filename = filename.sub(/\.wav\z/, "-noticeable.wav")
+    noticeable_path = File.join(temporary_directory, noticeable_filename)
+    noticeable_destination = File.join(output_directory, noticeable_filename)
+    write_pcm_wav(noticeable_path, amplified(samples, NOTICEABLE_GAIN))
+
+    generated_sounds << [generated_path, destination_path, "beep + #{words.inspect}", duration]
+    generated_sounds << [
+      noticeable_path,
+      noticeable_destination,
+      "more noticeable beep + #{words.inspect}",
+      duration,
+    ]
   end
 
-  generated_sounds.each do |generated_path, destination_path, words, duration|
+  attention_samples = silence(LEAD_IN_MS) + beep + silence(TRAILING_SILENCE_MS)
+  attention_path = File.join(temporary_directory, "attention.wav")
+  attention_destination = File.join(output_directory, "attention.wav")
+  write_pcm_wav(attention_path, attention_samples)
+  generated_sounds << [
+    attention_path,
+    attention_destination,
+    "attention beep",
+    attention_samples.length.to_f / SAMPLE_RATE,
+  ]
+
+  noticeable_attention_samples = silence(LEAD_IN_MS) + amplified(beep, NOTICEABLE_GAIN) +
+    silence(ATTENTION_GAP_MS) + amplified(beep, NOTICEABLE_GAIN) + silence(TRAILING_SILENCE_MS)
+  noticeable_attention_path = File.join(temporary_directory, "attention-noticeable.wav")
+  noticeable_attention_destination = File.join(output_directory, "attention-noticeable.wav")
+  write_pcm_wav(noticeable_attention_path, noticeable_attention_samples)
+  generated_sounds << [
+    noticeable_attention_path,
+    noticeable_attention_destination,
+    "more noticeable double attention beep",
+    noticeable_attention_samples.length.to_f / SAMPLE_RATE,
+  ]
+
+  generated_sounds.each do |generated_path, destination_path, description, duration|
     FileUtils.mv(generated_path, destination_path)
-    puts "Generated #{destination_path} (beep + #{words.inspect}, #{format('%.2f', duration)}s)"
+    puts "Generated #{destination_path} (#{description}, #{format('%.2f', duration)}s)"
   end
 end
